@@ -21,28 +21,36 @@ const Products = () => {
   };
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const getProducts = async () => {
-      setLoading(true);
-      const response = await fetch("https://fakestoreapi.com/products/");
-      if (componentMounted) {
+      try {
+        setLoading(true);
+        const response = await fetch("https://fakestoreapi.com/products/", {
+          signal: controller.signal,
+        });
         const products = await response.json();
-        // Add mock stock and variants to each product
         const enrichedProducts = products.map((product) => ({
           ...product,
-          stock: Math.random() > 0.3 ? Math.floor(Math.random() * 10 + 1) : 0, // ~30% chance of Out of Stock
+          stock: Math.random() > 0.3 ? Math.floor(Math.random() * 10 + 1) : 0,
           variants: ["Small", "Medium", "Large", "XL"],
         }));
         setData(enrichedProducts);
         setFilter(enrichedProducts);
         setLoading(false);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Fetch failed:", err);
+          setLoading(false);
+        }
       }
-
-      return () => {
-        componentMounted = false;
-      };
     };
 
     getProducts();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const Loading = () => {
